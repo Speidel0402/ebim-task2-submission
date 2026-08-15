@@ -1,0 +1,27 @@
+# Local credentials and environment overrides
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.token
+*credentials*
+*secret*
+
+# Binary release assets belong in GitHub Releases, never Git history
+*.tar
+*.tar.gz
+*.tar.zst
+*.zst.part-*
+*.zip
+
+# Local runtime/build state
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.log
+/release/
+/complete_offline/
