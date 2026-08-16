@@ -1,26 +1,11 @@
 # EBiM Task 2 submission
 
-This repository contains a Dockerized policy for **Task 2 — Deformable Material Handling (Thermal Pad Placement)**. The runtime consumes only the official policy-facing ROS streams, drives the robot from the official spawn to the work pose using odometry, raises the spine, estimates the pad and visually designated target board from the head camera, and executes a right-arm placement trajectory.
-
-## Compatibility
-
-- EBiM official scene/API baseline: `e36119cc43e949dc6269bfe5c1e7f613f9f24d0c`
-- Local post-rollout QC baseline: Task 2 evaluator PR #67 commit
-  `9ab59264de75f9cf0564eada259b13c706153c87` plus the merged PR #59
-  loose-target stream; neither evaluator nor its diagnostic inputs are shipped
-  in or consumed by the policy image.
-- Isaac Sim: 5.1.0
-- ROS: Jazzy, Fast DDS, host networking
-- Architecture: Linux x86_64, Python 3.12 ABI
-- Robot: mobile FR3 Duo with Robotiq grippers
-
-The policy does **not** start or reset Isaac Sim. Start the organizer-provided Task 2 scene first and leave it at its official initial state.
-
 ## Recommended: complete cloud delivery
 
-This GitHub repository is the compact, reviewable submission component. For a
-matched policy image, Isaac Sim runtime, benchmark workspace and RMPFlow bridge
-overlay, use the complete cloud delivery first:
+Use the complete cloud delivery as the primary reproduction path. It packages
+the matched policy image, Isaac Sim runtime, benchmark workspace and bridge
+overlay together; this GitHub repository is the compact, reviewable submission
+component.
 
 - [Download the complete delivery](https://drive.google.com/file/d/12HafElMaPuBduBuj8GEUksmjtrNVlqCS/view?usp=drive_link)
 - Archive: `ebim-task2-rmpflow-stagefix-20260816-reprofix.tar` (7.68 GB)
@@ -52,9 +37,62 @@ docker compose --env-file .env.base --profile isaac-sim-5.1.0 up -d \
   --no-build isaac-sim-5-1-0
 ```
 
-Use the episode command in the complete-delivery section below, followed by
-the packaged policy image. This is the recommended path because its images,
-workspace and bridge overlay were prepared together.
+### Run and evaluate one episode
+
+After the restore steps above, start the official evaluator once, then restart
+the Task 2 scene, run the packaged policy image, and request one evaluation.
+The evaluator is supplied by the benchmark checkout; it is not part of the
+policy container.
+
+```bash
+export BENCHMARK=/absolute/empty/path/benchmark
+export ISAAC_DOCKER_ROOT=/absolute/empty/docker-root
+
+cd "$BENCHMARK"
+bash scripts/evaluation/task2/setup.sh
+bash scripts/evaluation/task2/run.sh up
+
+seed=202681421
+runtime_workspace/restart_task2_isaac_randomized.sh \
+  --seed "$seed" --terminal-controller rmpflow --headless \
+  --render-hz 60 --ros-publish-rate 30 --policy-cameras-only \
+  --strict-official-runtime \
+  --robot-camera-keys head,wrist_left,wrist_right \
+  --robot-camera-frame-skip 2 --robot-camera-sensor-data-qos \
+  --force-render-loop
+
+docker run --rm --network host --ipc host \
+  -e ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}" \
+  -e FASTDDS_BUILTIN_TRANSPORTS=UDPv4 \
+  ebim-task2-policy:20260816-rmpflow-stagefix-final
+
+bash scripts/evaluation/task2/run.sh evaluate
+```
+
+The official evaluator writes `eval_camera_iou_<timestamp>.json` below
+`$ISAAC_DOCKER_ROOT/eval-task2/evaluate/`. Preserve that JSON with the seed
+and policy log. Use `bash scripts/evaluation/task2/run.sh down` after the
+evaluation campaign. [`EVALUATION.md`](EVALUATION.md) gives the verified
+multi-seed procedure and result-retention commands.
+
+## Compatibility
+
+- EBiM official scene/API baseline: `e36119cc43e949dc6269bfe5c1e7f613f9f24d0c`
+- Local post-rollout QC baseline: Task 2 evaluator PR #67 commit
+  `9ab59264de75f9cf0564eada259b13c706153c87` plus the merged PR #59
+  loose-target stream; neither evaluator nor its diagnostic inputs are shipped
+  in or consumed by the policy image.
+- Isaac Sim: 5.1.0
+- ROS: Jazzy, Fast DDS, host networking
+- Architecture: Linux x86_64, Python 3.12 ABI
+- Robot: mobile FR3 Duo with Robotiq grippers
+
+This repository contains a Dockerized policy for **Task 2 — Deformable
+Material Handling (Thermal Pad Placement)**. The runtime consumes only the
+official policy-facing ROS streams, drives the robot from the official spawn to
+the work pose using odometry, raises the spine, estimates the pad and visually
+designated target board from the head camera, and executes a right-arm
+placement trajectory. The policy does **not** start or reset Isaac Sim.
 
 ## GitHub-only policy build
 
@@ -119,58 +157,6 @@ only with the delivered, organizer-compatible bridge overlay.
 
 The container is CPU-only; it does not require `--gpus`. Keep the organizer's
 Isaac Sim container and ROS bridge running throughout the attempt.
-
-## Complete-delivery episode command
-
-The complete, checksummed delivery is provided separately because it includes
-large Docker image archives, the benchmark workspace and the RMPFlow bridge
-overlay used to align Cartesian policy targets with the Task 2 motion-generation
-path. These large artifacts must not be committed to Git history:
-
-- [Download the complete offline bundle](https://drive.google.com/file/d/12HafElMaPuBduBuj8GEUksmjtrNVlqCS/view?usp=drive_link)
-- Archive: `ebim-task2-rmpflow-stagefix-20260816-reprofix.tar` (7.68 GB)
-- SHA-256: `b455b3cc4ba298eda68c11c1f5c48d065b2912ccc78874006a41b2bf27a7fc16`
-
-The Drive artifact is access-controlled. Organizers must be granted access
-before relying on it as supplementary reproduction material.
-
-On a Linux host with Docker, NVIDIA drivers, NVIDIA Container Toolkit and a
-licensed Isaac Sim display host, restore and run the full delivery as follows:
-
-```bash
-sha256sum ebim-task2-rmpflow-stagefix-20260816-reprofix.tar
-tar -xf ebim-task2-rmpflow-stagefix-20260816-reprofix.tar
-cd final_20260816_rmpflow_stagefix/complete_offline
-sha256sum -c SHA256SUMS
-
-./load_images.sh
-./extract_workspace.sh /absolute/empty/path/benchmark
-
-export HOST_UID=$(id -u)
-export HOST_GID=$(id -g)
-export DISPLAY=:0
-export XAUTHORITY=/run/user/$(id -u)/gdm/Xauthority
-export ISAAC_DOCKER_ROOT=/absolute/empty/docker-root
-sudo runtime_workspace/prepare_isaac_docker_root.sh \
-  "$ISAAC_DOCKER_ROOT" "$HOST_UID" "$HOST_GID"
-
-cd /absolute/empty/path/benchmark/docker
-docker compose --env-file .env.base --profile isaac-sim-5.1.0 up -d \
-  --no-build isaac-sim-5-1-0
-
-cd ../..
-runtime_workspace/restart_task2_isaac_randomized.sh \
-  --terminal-controller rmpflow --headless --render-hz 60 \
-  --ros-publish-rate 30 --policy-cameras-only --strict-official-runtime \
-  --robot-camera-keys head,wrist_left,wrist_right \
-  --robot-camera-frame-skip 2 --robot-camera-sensor-data-qos \
-  --force-render-loop
-
-docker run --rm --network host --ipc host \
-  -e ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}" \
-  -e FASTDDS_BUILTIN_TRANSPORTS=UDPv4 \
-  ebim-task2-policy:20260816-rmpflow-stagefix-final
-```
 
 ## Controller alignment
 
