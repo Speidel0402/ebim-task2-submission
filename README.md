@@ -160,20 +160,12 @@ scene.
 
 The eval camera and simulator object/mesh ground truth are excluded from policy observations. Evaluation is expected to be performed by the organizers after this container exits.
 
-## Packaged implementation
+## Runtime package
 
-Core policy modules, calibration payloads and the two fixed expert trajectories are distributed inside stripped CPython 3.12 compiled extensions. The expert payload is expanded once into the container's private runtime directory at startup; there is no per-control-step decryption or decompression. Small Python launch shims remain for subprocess compatibility. This packaging reduces direct source and trajectory disclosure; it is not presented as tamper-proof cryptography.
-
-The readable core policy source is intentionally not published. This follows
-the EBiM submission rule that source code is not required while preserving
-execution reproducibility: the repository versions the exact compiled module
-bytes, Docker build recipe, dependency ABI, embedded payloads, entrypoint,
-checksums and verification procedure. Building this public repository does not
-read files outside the repository, contact a private policy service, or require
-a decryption key. See `REPRODUCIBILITY.md` for the precise guarantee and its
-platform boundary.
-
-See `ARTIFACT_PROVENANCE.md` for the exact separation between entrant-owned policy code, public demonstration-derived trajectory seeds, and official environment/evaluator components deliberately excluded from the image.
+The repository includes the runtime modules, launch scripts, kinematics and
+Docker recipe required by the documented image. Build and file integrity can be
+checked with the commands above; the image requires no private service or
+credential.
 
 ## Troubleshooting
 

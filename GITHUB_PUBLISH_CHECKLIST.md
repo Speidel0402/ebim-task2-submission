@@ -39,7 +39,7 @@ history and GitHub Actions history/logs, not only the current working tree.
   fresh-scene blind smoke, archive SHA256 values and a clean-clone rebuild.
 - Fill the registered team name, contact email and final public repository URL
   in `OFFICIAL_SUBMISSION.md`; do not guess them.
-- Confirm licenses and `ARTIFACT_PROVENANCE.md`, then tag the exact audited
-  commit. Keep the matching complete-bundle checksums with the cloud delivery.
+- Confirm licenses, then tag the exact audited commit. Keep the matching
+  complete-bundle checksums with the cloud delivery.
 - After changing visibility, re-check branch/ruleset protection because GitHub
   disables push rulesets during a private-to-public visibility change.

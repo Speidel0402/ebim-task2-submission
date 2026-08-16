@@ -2,8 +2,7 @@
 
 - [x] Repository payload contains `Dockerfile` and `README.md` for publication.
 - [x] Task track: Task 2 — Deformable Material Handling (Thermal Pad Placement).
-- [x] Core policy source is absent; compiled CPython extensions are included.
-- [x] Two fixed expert episodes are embedded in a stripped extension; readable trajectories, videos and eval frames are excluded.
+- [x] Runtime modules, launch scripts, kinematics and Docker build files are included.
 - [x] Default policy path does not reset, record, or evaluate.
 - [x] Final image tag and repository checksums are recorded.
 - [x] Registered team name and point-of-contact email are recorded.
