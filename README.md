@@ -18,6 +18,13 @@ runtime, evaluator and matching workspace prepared together.
 - Archive: `ebim-task2-rmpflow-stagefix-20260816-reprofix.tar` (7.68 GB)
 - SHA-256: `b455b3cc4ba298eda68c11c1f5c48d065b2912ccc78874006a41b2bf27a7fc16`
 
+> **Package documentation correction.** The archive's older
+> `complete_offline/README.md` states that it does not contain the evaluator.
+> Please ignore that statement: the delivered workspace contains the official
+> Task 2 evaluator and the delivered Docker images include
+> `eval-task2:ebim2026`. The commands in this README are the current
+> reproduction instructions.
+
 ### Requirements
 
 - Linux x86_64 host with NVIDIA driver, Docker Engine, Docker Compose v2 and
