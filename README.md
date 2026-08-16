@@ -1,53 +1,72 @@
 # EBiM Task 2 submission
 
-## Recommended: complete cloud delivery
+This submission has two deployment paths. Choose **Method A** for the complete,
+offline-matched reproduction delivery. Choose **Method B** only when an EBiM
+Task 2 runtime and its matching bridge adapter are already available.
 
-Use the complete cloud delivery as the primary reproduction path. It packages
-the matched policy image, Isaac Sim runtime, benchmark workspace and bridge
-overlay together; this GitHub repository is the compact, reviewable submission
-component.
+| Method | What it provides | Network needed after download | Recommended use |
+| --- | --- | --- | --- |
+| **A. Complete cloud delivery** | Policy image, Isaac Sim runtime, benchmark workspace, bridge overlay, official Task 2 evaluator and its prebuilt image | No | Organizer reproduction and evaluation |
+| **B. Public GitHub build** | Policy Dockerfile and policy runtime only | Yes, while building | Inspection or integration into an already prepared Task 2 runtime |
+
+## Method A: complete cloud delivery (recommended)
+
+Use this method for a clean reproduction. The archive contains the policy,
+runtime, evaluator and matching workspace prepared together.
 
 - [Download the complete delivery](https://drive.google.com/file/d/12HafElMaPuBduBuj8GEUksmjtrNVlqCS/view?usp=drive_link)
 - Archive: `ebim-task2-rmpflow-stagefix-20260816-reprofix.tar` (7.68 GB)
 - SHA-256: `b455b3cc4ba298eda68c11c1f5c48d065b2912ccc78874006a41b2bf27a7fc16`
 
-Restore the complete package on Linux x86_64 with Docker Engine, Docker Compose
-v2, NVIDIA drivers, NVIDIA Container Toolkit and a licensed Isaac Sim display
-host:
+### Requirements
+
+- Linux x86_64 host with NVIDIA driver, Docker Engine, Docker Compose v2 and
+  NVIDIA Container Toolkit.
+- A valid local `DISPLAY` and `XAUTHORITY` for the licensed Isaac Sim host.
+- Two writable, initially empty host directories: one for the extracted
+  benchmark workspace and one for Isaac Sim persistent data.
+
+### Restore and start the runtime
+
+Set the three paths below for the downloaded archive and the two empty host
+directories. The commands verify the archive, load all delivered images,
+extract the workspace, prepare writable Isaac directories, and start the
+delivered Isaac Sim image without rebuilding it.
 
 ```bash
-sha256sum ebim-task2-rmpflow-stagefix-20260816-reprofix.tar
-tar -xf ebim-task2-rmpflow-stagefix-20260816-reprofix.tar
+export BUNDLE=/absolute/path/ebim-task2-rmpflow-stagefix-20260816-reprofix.tar
+export BENCHMARK=/absolute/empty/path/benchmark
+export ISAAC_DOCKER_ROOT=/absolute/empty/path/isaac-data
+
+echo "b455b3cc4ba298eda68c11c1f5c48d065b2912ccc78874006a41b2bf27a7fc16  $BUNDLE" \
+  | sha256sum -c -
+tar -xf "$BUNDLE"
 cd final_20260816_rmpflow_stagefix/complete_offline
 sha256sum -c SHA256SUMS
 
 ./load_images.sh
-./extract_workspace.sh /absolute/empty/path/benchmark
+./extract_workspace.sh "$BENCHMARK"
 
 export HOST_UID=$(id -u)
 export HOST_GID=$(id -g)
 export DISPLAY=:0
 export XAUTHORITY=/run/user/$(id -u)/gdm/Xauthority
-export ISAAC_DOCKER_ROOT=/absolute/empty/docker-root
 sudo runtime_workspace/prepare_isaac_docker_root.sh \
   "$ISAAC_DOCKER_ROOT" "$HOST_UID" "$HOST_GID"
 
-cd /absolute/empty/path/benchmark/docker
+cd "$BENCHMARK/docker"
 docker compose --env-file .env.base --profile isaac-sim-5.1.0 up -d \
   --no-build isaac-sim-5-1-0
 ```
 
 ### Run and evaluate one episode
 
-After the restore steps above, start the official evaluator once, then restart
-the Task 2 scene, run the packaged policy image, and request one evaluation.
-The evaluator is supplied by the benchmark checkout; it is not part of the
-policy container.
+Start the delivered official evaluator once. Then restart the Task 2 scene for
+one explicit seed, run the packaged policy image, and request one score. The
+seed below is the package's recorded reproducibility regression seed; use a
+new explicit seed for each independent evaluation episode.
 
 ```bash
-export BENCHMARK=/absolute/empty/path/benchmark
-export ISAAC_DOCKER_ROOT=/absolute/empty/docker-root
-
 cd "$BENCHMARK"
 bash scripts/evaluation/task2/setup.sh
 docker compose --env-file scripts/evaluation/task2/.env \
@@ -83,6 +102,37 @@ The explicit `--no-build` command above therefore keeps this route offline.
 `bash scripts/evaluation/task2/run.sh up` remains the benchmark's source-build
 fallback when a preloaded evaluator image is not available.
 
+## Method B: public GitHub policy build
+
+This method builds **only** the policy image. It does not supply Isaac Sim, the
+benchmark workspace, the evaluator image, or the bridge adapter needed by the
+policy's terminal controller. Do not use it as a standalone reproduction path.
+
+On a Linux x86_64 host with Docker and Internet access, build the image:
+
+```bash
+git clone https://github.com/Speidel0402/ebim-task2-submission.git
+cd ebim-task2-submission
+sha256sum -c REPOSITORY_SHA256SUMS.txt
+
+docker build \
+  --build-arg TERMINAL_CONTROLLER=rmpflow \
+  -t ebim-task2-policy:20260816-rmpflow-stagefix-final .
+```
+
+On the host where the compatible Task 2 ROS graph and bridge adapter are
+already running, start exactly one policy attempt with:
+
+```bash
+docker run --rm --network host --ipc host \
+  -e ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}" \
+  -e FASTDDS_BUILTIN_TRANSPORTS=UDPv4 \
+  ebim-task2-policy:20260816-rmpflow-stagefix-final
+```
+
+Use the evaluator supplied by that benchmark runtime after the policy exits.
+For a complete, matched runtime and evaluator, return to Method A.
+
 ## Compatibility
 
 - EBiM official scene/API baseline: `e36119cc43e949dc6269bfe5c1e7f613f9f24d0c`
@@ -102,35 +152,7 @@ the work pose using odometry, raises the spine, estimates the pad and visually
 designated target board from the head camera, and executes a right-arm
 placement trajectory. The policy does **not** start or reset Isaac Sim.
 
-## GitHub-only policy build
-
-This route builds only the policy container. It does not provide Isaac Sim,
-the benchmark workspace, Docker images, or the matching RMPFlow overlay; those
-components must already be started separately.
-
-```bash
-docker build \
-  --build-arg TERMINAL_CONTROLLER=rmpflow \
-  -t ebim-task2-policy:20260816-rmpflow-stagefix-final .
-```
-
-Verify the published repository bytes before building:
-
-```bash
-sha256sum -c REPOSITORY_SHA256SUMS.txt
-```
-
-## Run one official attempt
-
-Isaac Sim must already publish its normal Task 2 ROS graph. Run:
-
-```bash
-docker run --rm --network host \
-  --ipc host \
-  -e ROS_DOMAIN_ID="${ROS_DOMAIN_ID:-0}" \
-  -e FASTDDS_BUILTIN_TRANSPORTS=UDPv4 \
-  ebim-task2-policy:20260816-rmpflow-stagefix-final
-```
+## Policy runtime contract
 
 The default entry point executes exactly one attempt. It does not request a scene reset, control a recorder, subscribe to the eval camera, or invoke an evaluator.
 
@@ -205,11 +227,12 @@ credential.
 
 ## Evaluation
 
-The official Task 2 evaluator is available separately in the benchmark and is
-not run by the policy container. It calculates pad/target IoU and orientation
-from eval-camera streams after policy motion stops. See `EVALUATION.md` for
-verified one-episode and multi-seed procedures, result retention, and the
-exact packaged randomization settings.
+The official Task 2 evaluator runs as a separate benchmark service, never
+inside the policy container. Method A includes its source and prebuilt image;
+it calculates pad/target IoU and orientation from eval-camera streams after
+policy motion stops. See `EVALUATION.md` for verified one-episode and
+multi-seed procedures, result retention, and the exact packaged randomization
+settings.
 
 ## Troubleshooting
 
