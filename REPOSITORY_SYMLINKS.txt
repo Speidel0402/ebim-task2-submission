@@ -1,6 +1,0 @@
-runtime/estimate_task2_initial_head_odom.py -> ../launch/estimate_task2_initial_head_odom.py
-runtime/estimate_task2_postdrift_head_target.py -> ../launch/estimate_task2_postdrift_head_target.py
-runtime/move_task2_base_by_odom.py -> ../launch/move_task2_base_by_odom.py
-runtime/replay_task2_hybrid_retarget.py -> ../launch/replay_task2_hybrid_retarget.py
-runtime/replay_task2_sample.py -> ../launch/replay_task2_sample.py
-runtime/stage_task2_base_from_official_start.py -> ../launch/stage_task2_base_from_official_start.py

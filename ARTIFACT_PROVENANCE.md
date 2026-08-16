@@ -36,3 +36,10 @@ none is copied into or observed by the policy container.
 ## Runtime observation contract
 
 The policy starts against the untouched organizer scene and is restricted to the official head, left-wrist, and right-wrist camera set plus normal robot state and odometry. The current right-arm path reads head/right-wrist RGB; left-wrist remains an allowed but unused official stream. It never subscribes to the eval camera and does not invoke reset or evaluation. Local QC is run by a separate host-side process only after the policy container exits.
+
+Local development may use an environment-only compatibility patch to diagnose
+duplicate Isaac ROS camera writers. That patch is not shipped in this policy
+repository, is not a scoring dependency, and does not alter camera prims,
+object state, randomization, physics, or evaluation. The submitted policy
+instead tolerates either official camera-writer QoS profile and rejects image
+frames whose timestamp is outside the active simulation-clock epoch.

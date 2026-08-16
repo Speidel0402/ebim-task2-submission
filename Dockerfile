@@ -22,13 +22,17 @@ RUN python3 -m pip install --break-system-packages --ignore-installed --no-cache
 WORKDIR /opt/ebim-task2
 COPY runtime/ /opt/ebim-task2/runtime/
 COPY launch/ /opt/ebim-task2/launch/
+COPY kinematics/ /opt/ebim-task2/kinematics/
+
+ARG TERMINAL_CONTROLLER=rmpflow
 
 ENV PYTHONPATH=/opt/ebim-task2/runtime \
     PYTHONUNBUFFERED=1 \
-    FASTDDS_BUILTIN_TRANSPORTS=UDPv4
+    FASTDDS_BUILTIN_TRANSPORTS=UDPv4 \
+    EBIM_TERMINAL_CONTROLLER=${TERMINAL_CONTROLLER}
 
 RUN chmod 0555 /opt/ebim-task2/launch/*.py /opt/ebim-task2/launch/*.sh \
     && source /opt/ros/jazzy/setup.bash \
-    && python3 -c 'import importlib; names=("task2_head_color_pose","replay_task2_sample","replay_task2_cartesian_retarget","replay_task2_hybrid_retarget","run_head_rule_retarget_campaign","stage_task2_base_from_official_start","estimate_task2_initial_head_odom","estimate_task2_postdrift_head_target","move_task2_base_by_odom","submission_embedded_config","submission_embedded_assets","submission_entry"); assert all(importlib.import_module(name).__file__.endswith(".so") for name in names)'
+    && python3 -c 'import importlib; names=("task2_head_color_pose","replay_task2_sample","replay_task2_cartesian_retarget","replay_task2_hybrid_retarget","run_head_rule_retarget_campaign","stage_task2_base_from_official_start","estimate_task2_initial_head_odom","estimate_task2_postdrift_head_target","move_task2_base_by_odom","task2_joint_kinematics","submission_embedded_config","submission_embedded_assets","submission_entry"); assert all(importlib.import_module(name).__file__.endswith(".so") for name in names)'
 
 ENTRYPOINT ["/opt/ebim-task2/launch/run_policy.sh"]

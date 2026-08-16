@@ -18,21 +18,33 @@ import numpy as np
 import rclpy
 from rclpy.node import Node
 from rclpy.qos import qos_profile_sensor_data
+from rosgraph_msgs.msg import Clock
 from sensor_msgs.msg import Image
 
 
 class FrameSaver(Node):
     def __init__(self, topic: str, output: str) -> None:
         super().__init__("task2_policy_frame_saver")
+        self.topic = topic
         self.output = output
         self.saved = False
         self.error = ""
+        self.sim_time = None
+        self.create_subscription(
+            Clock, "/isaac/clock", self._on_clock, qos_profile_sensor_data
+        )
         self.create_subscription(
             Image, topic, self._on_image, qos_profile_sensor_data
         )
 
+    def _on_clock(self, msg: Clock) -> None:
+        self.sim_time = float(msg.clock.sec) + float(msg.clock.nanosec) * 1.0e-9
+
     def _on_image(self, msg: Image) -> None:
         if self.saved or self.error:
+            return
+        stamp = float(msg.header.stamp.sec) + float(msg.header.stamp.nanosec) * 1.0e-9
+        if self.sim_time is None or abs(stamp - self.sim_time) > 0.5:
             return
         encoding = str(msg.encoding).lower()
         channels = {"rgb8": 3, "bgr8": 3, "rgba8": 4, "bgra8": 4}.get(encoding)
@@ -47,6 +59,23 @@ class FrameSaver(Node):
             image = cv2.cvtColor(image, cv2.COLOR_RGBA2BGR)
         elif encoding == "bgra8":
             image = cv2.cvtColor(image, cv2.COLOR_BGRA2BGR)
+        if self.topic == "/isaac/head_camera/image_raw":
+            # The robot asset can expose a second legacy render product on
+            # the same ROS name. Reject that unrelated scene view using only
+            # the strategy RGB itself: a valid Task 2 head frame contains the
+            # target PCB component used by the policy's normal observation.
+            from task2_head_color_pose import extract_color_feature
+
+            try:
+                extract_color_feature(
+                    cv2.cvtColor(image, cv2.COLOR_BGR2RGB),
+                    "board_target",
+                    "green_frame_component_pca_v1",
+                    int(msg.width),
+                    int(msg.height),
+                )
+            except (RuntimeError, ValueError):
+                return
         if not cv2.imwrite(self.output, image):
             self.error = f"could not write {self.output}"
             return
