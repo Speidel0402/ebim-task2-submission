@@ -27,9 +27,20 @@ runtime, evaluator and matching workspace prepared together.
 
 ### Requirements
 
-- Linux x86_64 host with NVIDIA driver, Docker Engine, Docker Compose v2 and
-  NVIDIA Container Toolkit.
-- A valid local `DISPLAY` and `XAUTHORITY` for the licensed Isaac Sim host.
+- Linux x86_64 host. This containerized delivery is intended for Ubuntu
+  22.04/24.04 with Docker Engine, Docker Compose v2 and NVIDIA Container
+  Toolkit.
+- NVIDIA RTX-capable GPU supported by Isaac Sim 5.1.0. Plan for at least
+  16 GB VRAM, 32 GB host RAM and 50 GB free SSD space; 64 GB RAM and more
+  free SSD space are recommended for repeated evaluation runs. See the
+  [Isaac Sim 5.1 requirements](https://docs.isaacsim.omniverse.nvidia.com/5.1.0/installation/requirements.html).
+- The delivered Isaac image declares NVIDIA driver `570.169` as its minimum.
+  Use NVIDIA's Linux driver version validated for Isaac Sim 5.1.0
+  (`580.65.06`) or a compatible newer production driver where possible.
+- A valid local X11 display: `DISPLAY`, `XAUTHORITY` and
+  `/tmp/.X11-unix` must exist on the host. `--headless` disables the visible
+  Isaac window, but this delivered Compose configuration still bind-mounts the
+  host X11 socket and X authority file.
 - Two writable, initially empty host directories: one for the extracted
   benchmark workspace and one for Isaac Sim persistent data.
 
@@ -44,11 +55,17 @@ delivered Isaac Sim image without rebuilding it.
 export BUNDLE=/absolute/path/ebim-task2-rmpflow-stagefix-20260816-reprofix.tar
 export BENCHMARK=/absolute/empty/path/benchmark
 export ISAAC_DOCKER_ROOT=/absolute/empty/path/isaac-data
+export DELIVERY_ROOT=/absolute/empty/path/delivery-unpack
 
 echo "b455b3cc4ba298eda68c11c1f5c48d065b2912ccc78874006a41b2bf27a7fc16  $BUNDLE" \
   | sha256sum -c -
-tar -xf "$BUNDLE"
-cd final_20260816_rmpflow_stagefix/complete_offline
+mkdir -p "$DELIVERY_ROOT"
+if find "$DELIVERY_ROOT" -mindepth 1 -print -quit | grep -q .; then
+  echo "DELIVERY_ROOT must be empty: $DELIVERY_ROOT" >&2
+  exit 2
+fi
+tar -xf "$BUNDLE" -C "$DELIVERY_ROOT"
+cd "$DELIVERY_ROOT/final_20260816_rmpflow_stagefix/complete_offline"
 sha256sum -c SHA256SUMS
 
 ./load_images.sh
@@ -58,6 +75,8 @@ export HOST_UID=$(id -u)
 export HOST_GID=$(id -g)
 export DISPLAY=:0
 export XAUTHORITY=/run/user/$(id -u)/gdm/Xauthority
+test -S /tmp/.X11-unix/X0 || { echo "Missing X11 socket: /tmp/.X11-unix/X0" >&2; exit 2; }
+test -r "$XAUTHORITY" || { echo "Unreadable XAUTHORITY: $XAUTHORITY" >&2; exit 2; }
 sudo runtime_workspace/prepare_isaac_docker_root.sh \
   "$ISAAC_DOCKER_ROOT" "$HOST_UID" "$HOST_GID"
 

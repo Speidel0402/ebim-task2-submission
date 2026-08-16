@@ -15,12 +15,14 @@ stream, so a mismatched scene and evaluator revision can invalidate results.
 ## Start the evaluator
 
 Restore and start the complete cloud delivery as described in `README.md`, then
-set the paths below:
+reuse its `BENCHMARK` and `ISAAC_DOCKER_ROOT` values. If this shell is new,
+set both paths to the same directories used for the restore; they must not be
+changed between Isaac Sim startup and evaluation:
 
 ```bash
-export BENCHMARK=/absolute/empty/path/benchmark
-export ISAAC_DOCKER_ROOT=/absolute/empty/docker-root
-export RESULT_ROOT=$PWD/task2-results
+export BENCHMARK=/absolute/path/to/extracted/benchmark
+export ISAAC_DOCKER_ROOT=/absolute/path/to/isaac-data
+export RESULT_ROOT="${RESULT_ROOT:-$PWD/task2-results}"
 mkdir -p "$RESULT_ROOT"
 
 cd "$BENCHMARK"
@@ -82,9 +84,9 @@ integer per line. With the evaluator service already running, execute the
 following sequential loop:
 
 ```bash
-export BENCHMARK=/absolute/empty/path/benchmark
-export ISAAC_DOCKER_ROOT=/absolute/empty/docker-root
-export RESULT_ROOT=$PWD/task2-results
+export BENCHMARK=/absolute/path/to/extracted/benchmark
+export ISAAC_DOCKER_ROOT=/absolute/path/to/isaac-data
+export RESULT_ROOT="${RESULT_ROOT:-$PWD/task2-results}"
 mkdir -p "$RESULT_ROOT"
 
 while read -r seed; do
