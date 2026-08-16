@@ -50,7 +50,10 @@ export ISAAC_DOCKER_ROOT=/absolute/empty/docker-root
 
 cd "$BENCHMARK"
 bash scripts/evaluation/task2/setup.sh
-bash scripts/evaluation/task2/run.sh up
+docker compose --env-file scripts/evaluation/task2/.env \
+  -f scripts/evaluation/task2/docker-compose.yml \
+  --profile eval up -d --no-build eval_task2
+bash scripts/evaluation/task2/run.sh status
 
 seed=202681421
 runtime_workspace/restart_task2_isaac_randomized.sh \
@@ -74,6 +77,11 @@ The official evaluator writes `eval_camera_iou_<timestamp>.json` below
 and policy log. Use `bash scripts/evaluation/task2/run.sh down` after the
 evaluation campaign. [`EVALUATION.md`](EVALUATION.md) gives the verified
 multi-seed procedure and result-retention commands.
+
+The complete delivery already loads the matching `eval-task2:ebim2026` image.
+The explicit `--no-build` command above therefore keeps this route offline.
+`bash scripts/evaluation/task2/run.sh up` remains the benchmark's source-build
+fallback when a preloaded evaluator image is not available.
 
 ## Compatibility
 

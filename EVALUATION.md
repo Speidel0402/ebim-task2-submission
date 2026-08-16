@@ -25,9 +25,16 @@ mkdir -p "$RESULT_ROOT"
 
 cd "$BENCHMARK"
 bash scripts/evaluation/task2/setup.sh
-bash scripts/evaluation/task2/run.sh up
+docker compose --env-file scripts/evaluation/task2/.env \
+  -f scripts/evaluation/task2/docker-compose.yml \
+  --profile eval up -d --no-build eval_task2
 bash scripts/evaluation/task2/run.sh status
 ```
+
+The complete delivery already loads the matching `eval-task2:ebim2026` image,
+so this command starts the evaluator without an image rebuild or network
+access. `bash scripts/evaluation/task2/run.sh up` is retained as the official
+source-build fallback for environments that do not have that preloaded image.
 
 ## Evaluate one episode
 
