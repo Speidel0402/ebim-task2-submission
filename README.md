@@ -16,7 +16,51 @@ This repository contains a Dockerized policy for **Task 2 — Deformable Materia
 
 The policy does **not** start or reset Isaac Sim. Start the organizer-provided Task 2 scene first and leave it at its official initial state.
 
-## Build
+## Recommended: complete cloud delivery
+
+This GitHub repository is the compact, reviewable submission component. For a
+matched policy image, Isaac Sim runtime, benchmark workspace and RMPFlow bridge
+overlay, use the complete cloud delivery first:
+
+- [Download the complete delivery](https://drive.google.com/file/d/12HafElMaPuBduBuj8GEUksmjtrNVlqCS/view?usp=drive_link)
+- Archive: `ebim-task2-rmpflow-stagefix-20260816-reprofix.tar` (7.68 GB)
+- SHA-256: `b455b3cc4ba298eda68c11c1f5c48d065b2912ccc78874006a41b2bf27a7fc16`
+
+Restore the complete package on Linux x86_64 with Docker Engine, Docker Compose
+v2, NVIDIA drivers, NVIDIA Container Toolkit and a licensed Isaac Sim display
+host:
+
+```bash
+sha256sum ebim-task2-rmpflow-stagefix-20260816-reprofix.tar
+tar -xf ebim-task2-rmpflow-stagefix-20260816-reprofix.tar
+cd final_20260816_rmpflow_stagefix/complete_offline
+sha256sum -c SHA256SUMS
+
+./load_images.sh
+./extract_workspace.sh /absolute/empty/path/benchmark
+
+export HOST_UID=$(id -u)
+export HOST_GID=$(id -g)
+export DISPLAY=:0
+export XAUTHORITY=/run/user/$(id -u)/gdm/Xauthority
+export ISAAC_DOCKER_ROOT=/absolute/empty/docker-root
+sudo runtime_workspace/prepare_isaac_docker_root.sh \
+  "$ISAAC_DOCKER_ROOT" "$HOST_UID" "$HOST_GID"
+
+cd /absolute/empty/path/benchmark/docker
+docker compose --env-file .env.base --profile isaac-sim-5.1.0 up -d \
+  --no-build isaac-sim-5-1-0
+```
+
+Use the episode command in the complete-delivery section below, followed by
+the packaged policy image. This is the recommended path because its images,
+workspace and bridge overlay were prepared together.
+
+## GitHub-only policy build
+
+This route builds only the policy container. It does not provide Isaac Sim,
+the benchmark workspace, Docker images, or the matching RMPFlow overlay; those
+components must already be started separately.
 
 ```bash
 docker build \
@@ -76,7 +120,7 @@ only with the delivered, organizer-compatible bridge overlay.
 The container is CPU-only; it does not require `--gpus`. Keep the organizer's
 Isaac Sim container and ROS bridge running throughout the attempt.
 
-## Complete delivery and reproducibility bundle
+## Complete-delivery episode command
 
 The complete, checksummed delivery is provided separately because it includes
 large Docker image archives, the benchmark workspace and the RMPFlow bridge
@@ -140,10 +184,8 @@ granting access to simulator object state or evaluator inputs.
 `/isaac/task2/agent_ee_target` and `/isaac/spine_target` are explicit bridge
 extension inputs, not entries in the organizer's public `topics.yaml` and not
 claims of real-robot interfaces. The current overlay applies the resulting
-joint actions inside the supplied bridge. Before an official run, confirm with
-the organizers whether this bridge path is accepted, or use the corresponding
-adapter revision that republishes the resulting joint targets through the
-official arm command topics. See `PRE_SUBMISSION_VERIFICATION.md`.
+joint actions inside the supplied bridge. Run it with the delivered matching
+overlay. See `PRE_SUBMISSION_VERIFICATION.md`.
 
 The policy image itself does not start Isaac Sim or modify the organizer's
 scene.
@@ -166,6 +208,14 @@ The repository includes the runtime modules, launch scripts, kinematics and
 Docker recipe required by the documented image. Build and file integrity can be
 checked with the commands above; the image requires no private service or
 credential.
+
+## Evaluation
+
+The official Task 2 evaluator is available separately in the benchmark and is
+not run by the policy container. It calculates pad/target IoU and orientation
+from eval-camera streams after policy motion stops. See `EVALUATION.md` for
+verified one-episode and multi-seed procedures, result retention, and the
+exact packaged randomization settings.
 
 ## Troubleshooting
 
